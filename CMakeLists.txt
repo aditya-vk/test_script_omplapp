@@ -36,6 +36,7 @@ find_package(aikido 0.4.0 REQUIRED
     robot
     statespace
     io
+    rviz
 )
 
 # Install the data

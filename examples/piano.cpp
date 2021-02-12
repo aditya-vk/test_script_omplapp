@@ -107,8 +107,8 @@ const SkeletonPtr makeBodyFromURDF(
 
 // Example script.
 int main(int argc, char* argv[]) {
-  std::string worldName = "";
-  std::string robotName = "";
+  std::string worldName = "3D/Apartment_env";
+  std::string robotName = "3D/Apartment_robot";
 
   /// Load the environment.
   ROS_INFO("Starting ROS node.");
@@ -126,6 +126,7 @@ int main(int argc, char* argv[]) {
                   << execTopicName << "' InteractiveMarker topic in RViz.");
   aikido::rviz::InteractiveMarkerViewer viewer(execTopicName, baseFrameName,
                                                env);
+  viewer.setAutoUpdate(true);
 
   // Resolves package:// URIs by emulating the behavior of 'catkin_find'.
   const auto resourceRetriever =
@@ -216,5 +217,23 @@ int main(int argc, char* argv[]) {
   ompl::base::PlannerStatus status =
       planner.solve(ompl::base::plannerNonTerminatingCondition());
 
+  if (status == ompl::base::PlannerStatus::EXACT_SOLUTION) {
+    auto path = std::dynamic_pointer_cast<ompl::geometric::PathGeometric>(
+        pdef->getSolutionPath());
+    for (std::size_t idx = 0; idx < path->getStateCount(); ++idx) {
+      waitForUser("Visualized next state.");
+      auto se2State =
+          path->getState(idx)->as<ompl::base::SE2StateSpace::StateType>();
+      // Convert positions to Eigen.
+      // DART To OMPL settings: angles, positions: ax, az, ay, x, z, y.
+      Eigen::VectorXd positions(6);
+      positions << 0.0, se2State->getYaw(), 0.0, se2State->getX(), 0.0,
+          se2State->getY();
+
+      // Set Positions for the robot.
+      robot->setPositions(positions);
+    }
+    waitForUser("Visualization complete.");
+  }
   return 0;
 }
